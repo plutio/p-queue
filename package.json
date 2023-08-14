@@ -66,10 +66,6 @@
   "engines": {
     "node": ">=12"
   },
-  "exports": "./dist/index.js",
-  "files": [
-    "dist"
-  ],
   "funding": "https://github.com/sponsors/sindresorhus",
   "homepage": "https://github.com/sindresorhus/p-queue#readme",
   "keywords": [
