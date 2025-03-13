@@ -8,13 +8,41 @@ For servers, you probably want a Redis-backed [job queue](https://github.com/sin
 
 Note that the project is feature complete. We are happy to review pull requests, but we don't plan any further development. We are also not answering email support questions.
 
+---
+
+<br>
+<div align="center">
+	<p>
+		<p>
+			<sup>
+				<a href="https://github.com/sponsors/sindresorhus">Sindre's open source work is supported by the community</a><br>Special thanks to:
+			</sup>
+		</p>
+		<br>
+		<br>
+		<a href="https://fetchfox.ai?ref=sindre">
+			<div>
+				<img src="https://sindresorhus.com/assets/thanks/fetchfox-logo.svg" height="200"/>
+			</div>
+			<b>Scrape anything with FetchFox</b>
+			<div>
+				<sup>FetchFox is an AI powered scraping tool that lets you scrape data from any website</sup>
+			</div>
+		</a>
+	</p>
+	<br>
+	<br>
+</div>
+
+---
+
 ## Install
 
 ```sh
 npm install p-queue
 ```
 
-**Warning:** This package is native [ESM](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) and no longer provides a CommonJS export. If your project uses CommonJS, you'll have to [convert to ESM](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c) or use the [dynamic `import()`](https://v8.dev/features/dynamic-import) function. Please don't open issues for questions regarding CommonJS / ESM. You can also use [version 6](https://github.com/sindresorhus/p-queue/tree/v6.6.2) instead which is pretty stable. We will backport security fixes to v6 for the foreseeable future.
+**Warning:** This package is native [ESM](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Modules) and no longer provides a CommonJS export. If your project uses CommonJS, you'll have to [convert to ESM](https://gist.github.com/sindresorhus/a39789f98801d908bbc7ff3ecc99d99c). Please don't open issues for questions regarding CommonJS / ESM.
 
 ## Usage
 
@@ -116,7 +144,9 @@ If `true`, specifies that any [pending](https://developer.mozilla.org/en-US/docs
 
 #### .add(fn, options?)
 
-Adds a sync or async task to the queue. Always returns a promise.
+Adds a sync or async task to the queue.
+
+Returns a promise with the return value of `fn`.
 
 Note: If your items can potentially throw an exception, you must handle those errors from the returned Promise or they may be reported as an unhandled Promise rejection and potentially cause your process to exit immediately.
 
@@ -137,14 +167,18 @@ Default: `0`
 
 Priority of operation. Operations with greater priority will be scheduled first.
 
+##### id
+
+Type `string`
+
+Unique identifier for the promise function, used to update its priority before execution. If not specified, it is auto-assigned an incrementing BigInt starting from `1n`.
+
 ##### signal
 
-*Requires Node.js 16 or later.*
-
-[`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) for cancellation of the operation. When aborted, it will be removed from the queue and the `queue.add()` call will reject with an `AbortError`. If the operation is already running, the signal will need to be handled by the operation itself.
+[`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) for cancellation of the operation. When aborted, it will be removed from the queue and the `queue.add()` call will reject with an [error](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal/reason). If the operation is already running, the signal will need to be handled by the operation itself.
 
 ```js
-import PQueue, {AbortError} from 'p-queue';
+import PQueue from 'p-queue';
 import got, {CancelError} from 'got';
 
 const queue = new PQueue();
@@ -168,7 +202,7 @@ try {
 		}
 	}, {signal: controller.signal});
 } catch (error) {
-	if (!(error instanceof AbortError)) {
+	if (!(error instanceof DOMException)) {
 		throw error;
 	}
 }
@@ -237,6 +271,44 @@ console.log(queue.sizeBy({priority: 1}));
 console.log(queue.sizeBy({priority: 0}));
 //=> 1
 ```
+
+#### .setPriority(id, priority)
+
+Updates the priority of a promise function by its id, affecting its execution order. Requires a defined concurrency limit to take effect.
+
+For example, this can be used to prioritize a promise function to run earlier.
+
+```js
+import PQueue from 'p-queue';
+
+const queue = new PQueue({concurrency: 1});
+
+queue.add(async () => '🦄', {priority: 1});
+queue.add(async () => '🦀', {priority: 0, id: '🦀'});
+queue.add(async () => '🦄', {priority: 1});
+queue.add(async () => '🦄', {priority: 1});
+
+queue.setPriority('🦀', 2);
+```
+
+In this case, the promise function with `id: '🦀'` runs second.
+
+You can also deprioritize a promise function to delay its execution:
+
+```js
+import PQueue from 'p-queue';
+
+const queue = new PQueue({concurrency: 1});
+
+queue.add(async () => '🦄', {priority: 1});
+queue.add(async () => '🦀', {priority: 1, id: '🦀'});
+queue.add(async () => '🦄');
+queue.add(async () => '🦄', {priority: 0});
+
+queue.setPriority('🦀', -1);
+```
+
+Here, the promise function with `id: '🦀'` executes last.
 
 #### .pending
 
@@ -378,10 +450,6 @@ await queue.add(() => delay(600));
 //=> 'Task is completed.  Size: 0  Pending: 0'
 ```
 
-### AbortError
-
-The error thrown by `queue.add()` when a job is aborted before it is run. See [`signal`](#signal).
-
 ## Advanced example
 
 A more advanced example to help you understand the flow.
@@ -504,15 +572,3 @@ They are just different constraints. The `concurrency` option limits how many th
 - [p-debounce](https://github.com/sindresorhus/p-debounce) - Debounce promise-returning & async functions
 - [p-all](https://github.com/sindresorhus/p-all) - Run promise-returning & async functions concurrently with optional limited concurrency
 - [More…](https://github.com/sindresorhus/promise-fun)
-
----
-
-<div align="center">
-	<b>
-		<a href="https://tidelift.com/subscription/pkg/npm-p-queue?utm_source=npm-p-queue&utm_medium=referral&utm_campaign=readme">Get professional support for this package with a Tidelift subscription</a>
-	</b>
-	<br>
-	<sub>
-		Tidelift helps make open source sustainable for maintainers while giving companies<br>assurances about security, maintenance, and licensing for their dependencies.
-	</sub>
-</div>
