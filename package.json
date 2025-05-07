@@ -6,10 +6,6 @@
 	"repository": "sindresorhus/p-queue",
 	"funding": "https://github.com/sponsors/sindresorhus",
 	"type": "module",
-	"exports": {
-		"types": "./dist/index.d.ts",
-		"default": "./dist/index.js"
-	},
 	"sideEffects": false,
 	"engines": {
 		"node": ">=18"
@@ -20,9 +16,6 @@
 		"bench": "node --import=tsx/esm bench.ts",
 		"prepublishOnly": "del-cli dist && tsc"
 	},
-	"files": [
-		"dist"
-	],
 	"types": "dist/index.d.ts",
 	"keywords": [
 		"promise",
